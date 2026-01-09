@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <head>
   <meta charset="UTF-8" />
   <title>二手交易平台</title>
   <style>
@@ -45,52 +48,76 @@
 </div>
 
 <script>
-let items = JSON.parse(localStorage.getItem("items") || "[]");
+   apiKey: "AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
+    authDomain: "sale-chiikawa.firebaseapp.com",
+    projectId: "sale-chiikawa",
+    storageBucket: "sale-chiikawa.firebasestorage.app",
+    messagingSenderId: "22981104406",
+    appId: "1:22981104406:web:7c094b64fc1877c6d1f637"
+  };
 
-function addItem() {
-  const name = document.getElementById("name").value;
-  const price = document.getElementById("price").value;
-  const place = document.getElementById("place").value;
-  const photoInput = document.getElementById("photo");
+  // 初始化 Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-  if (!name || !price || !photoInput.files[0]) {
-    alert("請填寫完整");
-    return;
+  const itemsBox = document.getElementById("items");
+
+  // 新增商品
+  function addItem() {
+    const name = document.getElementById("name").value;
+    const price = document.getElementById("price").value;
+    const seller = document.getElementById("seller").value;
+    const contact = document.getElementById("contact").value;
+    const place = document.getElementById("place").value;
+    const photoInput = document.getElementById("photo");
+
+    if (!name || !price || !seller || !contact || !photoInput.files[0]) {
+      alert("請填寫所有欄位");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      db.collection("items").add({
+        name,
+        price,
+        seller,
+        contact,
+        place,
+        img: reader.result,
+        createdAt: new Date()
+      }).then(() => {
+        alert("商品已上架！");
+        renderItems();
+      });
+    };
+    reader.readAsDataURL(photoInput.files[0]);
   }
 
-  const reader = new FileReader();
-  reader.onload = function() {
-    items.push({ name, price, place, img: reader.result });
-    localStorage.setItem("items", JSON.stringify(items));
-    render();
-  };
-  reader.readAsDataURL(photoInput.files[0]);
-}
+  // 顯示所有商品（所有人共用）
+  function renderItems() {
+    itemsBox.innerHTML = "";
+    db.collection("items")
+      .orderBy("createdAt", "desc")
+      .get()
+      .then(snapshot => {
+        snapshot.forEach(doc => {
+          const i = doc.data();
+          itemsBox.innerHTML += `
+            <div class="item">
+              <img src="${i.img}">
+              <b>${i.name}</b><br>
+              價格：$${i.price}<br>
+              賣家：${i.seller}<br>
+              聯繫方式：${i.contact}<br>
+              交易地點：${i.place}<br>
+            </div>
+          `;
+        });
+      });
+  }
 
-function render() {
-  const box = document.getElementById("items");
-  box.innerHTML = "";
-  items.forEach((i, idx) => {
-    box.innerHTML += `
-      <div class="item">
-        <img src="${i.img}">
-        <b>${i.name}</b><br>
-        價格：$${i.price}<br>
-        交易地點：${i.place}<br>
-        <button onclick="contact('${i.name}', '${i.place}')">聯繫賣家</button>
-      </div>
-    `;
-  });
-}
-
-function contact(name, place) {
-  alert(
-    "你對商品【" + name + "】有興趣\n" +
-    "建議交易地點：" + place + "\n\n請聯絡賣家完成交易"
-  );
-}
-
-render();
+  renderItems();
 </script>
 
 </body>
