@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>二手交易平台</title>
 
-  <!-- Firebase SDK（compat 版，適合純 HTML） -->
+  <!-- Firebase SDK（CDN + compat，適合 GitHub Pages） -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -86,23 +86,22 @@
 </div>
 
 <script>
-  /* 🔥 Firebase 設定（已幫你整理好） */
-const firebaseConfig = {
+  /* ===== Firebase 初始化（請勿改動格式） ===== */
+  const firebaseConfig = {
     apiKey: "AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
     authDomain: "sale-chiikawa.firebaseapp.com",
     projectId: "sale-chiikawa",
-    storageBucket: "sale-chiikawa.firebasestorage.app",
+    storageBucket: "sale-chiikawa.appspot.com",
     messagingSenderId: "22981104406",
     appId: "1:22981104406:web:7c094b64fc1877c6d1f637"
   };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
   const itemsBox = document.getElementById("items");
 
-  /* 新增商品 */
+  /* ===== 新增商品 ===== */
   function addItem() {
     const name = document.getElementById("name").value.trim();
     const price = document.getElementById("price").value;
@@ -118,46 +117,60 @@ const firebaseConfig = {
 
     const reader = new FileReader();
     reader.onload = function () {
-      db.collection("items").add({
-        name,
-        price,
-        seller,
-        contact,
-        place,
-        img: reader.result,
-        createdAt: new Date()
-      }).then(() => {
-        // 清空表單
-        document.getElementById("name").value = "";
-        document.getElementById("price").value = "";
-        document.getElementById("seller").value = "";
-        document.getElementById("contact").value = "";
-        document.getElementById("photo").value = "";
-      });
+      db.collection("items")
+        .add({
+          name,
+          price,
+          seller,
+          contact,
+          place,
+          img: reader.result,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+          alert("✅ 商品已成功上架");
+
+          // 清空表單
+          document.getElementById("name").value = "";
+          document.getElementById("price").value = "";
+          document.getElementById("seller").value = "";
+          document.getElementById("contact").value = "";
+          document.getElementById("photo").value = "";
+        })
+        .catch((error) => {
+          alert("❌ Firestore 寫入失敗\n\n" + error.message);
+          console.error(error);
+        });
     };
+
     reader.readAsDataURL(photoInput.files[0]);
   }
 
-  /* 即時顯示所有商品（多人同步） */
+  /* ===== 即時同步顯示商品 ===== */
   function renderItems() {
     db.collection("items")
       .orderBy("createdAt", "desc")
-      .onSnapshot(snapshot => {
-        itemsBox.innerHTML = "";
-        snapshot.forEach(doc => {
-          const i = doc.data();
-          itemsBox.innerHTML += `
-            <div class="item">
-              <img src="${i.img}">
-              <b>${i.name}</b><br>
-              價格：$${i.price}<br>
-              賣家：${i.seller}<br>
-              聯繫方式：${i.contact}<br>
-              交易地點：${i.place}<br>
-            </div>
-          `;
-        });
-      });
+      .onSnapshot(
+        (snapshot) => {
+          itemsBox.innerHTML = "";
+          snapshot.forEach((doc) => {
+            const i = doc.data();
+            itemsBox.innerHTML += `
+              <div class="item">
+                <img src="${i.img}">
+                <b>${i.name}</b><br>
+                價格：$${i.price}<br>
+                賣家：${i.seller}<br>
+                聯繫方式：${i.contact}<br>
+                交易地點：${i.place}<br>
+              </div>
+            `;
+          });
+        },
+        (error) => {
+          console.error("❌ 即時監聽錯誤：", error);
+        }
+      );
   }
 
   renderItems();
