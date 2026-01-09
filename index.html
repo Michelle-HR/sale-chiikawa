@@ -95,27 +95,27 @@
   }
 
   // 顯示所有商品（所有人共用）
-  function renderItems() {
-    itemsBox.innerHTML = "";
-    db.collection("items")
-      .orderBy("createdAt", "desc")
-      .get()
-      .then(snapshot => {
-        snapshot.forEach(doc => {
-          const i = doc.data();
-          itemsBox.innerHTML += `
-            <div class="item">
-              <img src="${i.img}">
-              <b>${i.name}</b><br>
-              價格：$${i.price}<br>
-              賣家：${i.seller}<br>
-              聯繫方式：${i.contact}<br>
-              交易地點：${i.place}<br>
-            </div>
-          `;
-        });
+ function renderItems() {
+  db.collection("items")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+      itemsBox.innerHTML = "";
+      snapshot.forEach(doc => {
+        const i = doc.data();
+        itemsBox.innerHTML += `
+          <div class="item">
+            <img src="${i.img}">
+            <b>${i.name}</b><br>
+            價格：$${i.price}<br>
+            賣家：${i.seller}<br>
+            聯繫方式：${i.contact}<br>
+            交易地點：${i.place}<br>
+          </div>
+        `;
       });
-  }
+    });
+}
+
 
   renderItems();
 </script>
