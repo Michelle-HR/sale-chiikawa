@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>二手交易平台</title>
 
-  <!-- Firebase SDK（只用這一組，不要再加 module） -->
+  <!-- Firebase SDK（CDN + compat） -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -35,12 +35,25 @@
     }
     button {
       cursor: pointer;
+      background: #2c7be5;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #1a68d1;
+    }
+    small {
+      color: #666;
+      display: block;
+      margin-top: 4px;
     }
     img {
       width: 100%;
       max-height: 200px;
       object-fit: cover;
       margin-bottom: 6px;
+      border-radius: 4px;
     }
     .item {
       border-bottom: 1px solid #ddd;
@@ -64,7 +77,9 @@
     <input type="number" id="price" placeholder="價格">
     <input type="text" id="seller" placeholder="賣家名字">
     <input type="text" id="contact" placeholder="聯繫方式（Line / Email）">
-    <input type="file" id="photo">
+
+    <input type="file" id="photo" accept="image/*">
+    <small>📌 圖片需小於 <b>700KB</b>（避免無法上架）</small>
 
     <select id="place">
       <option>國壽仁愛大樓</option>
@@ -85,9 +100,9 @@
 
 </div>
 
-<!-- ✅ 所有 JS 一定放在 body 最後 -->
+<!-- 所有 JS 一定放在 body 最後 -->
 <script>
-  /* Firebase 初始化 */
+  /* ===== Firebase 初始化 ===== */
   const firebaseConfig = {
     apiKey: "AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
     authDomain: "sale-chiikawa.firebaseapp.com",
@@ -99,10 +114,9 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-
   const itemsBox = document.getElementById("items");
 
-  /* 新增商品 */
+  /* ===== 新增商品（含圖片大小限制） ===== */
   function addItem() {
     const name = document.getElementById("name").value.trim();
     const price = document.getElementById("price").value;
@@ -116,8 +130,31 @@
       return;
     }
 
+    const file = photoInput.files[0];
+
+    /* 🔒 檔案大小限制（700KB） */
+    const MAX_SIZE = 700 * 1024;
+    if (file.size > MAX_SIZE) {
+      alert(
+        "❌ 圖片太大，無法上架\n\n" +
+        "請選擇小於 700KB 的圖片\n" +
+        "目前大小：" + Math.round(file.size / 1024) + " KB"
+      );
+      photoInput.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = function () {
+      const base64 = reader.result;
+
+      /* 🔐 Base64 再次保險（避免 Firestore 1MB 限制） */
+      const estimatedBytes = Math.ceil(base64.length * 0.75);
+      if (estimatedBytes > 1024 * 1024) {
+        alert("❌ 圖片轉換後仍超過 1MB，請使用更小圖片");
+        return;
+      }
+
       db.collection("items")
         .add({
           name,
@@ -125,13 +162,12 @@
           seller,
           contact,
           place,
-          img: reader.result,
+          img: base64,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         })
         .then(() => {
-          alert("✅ 商品已上架");
+          alert("✅ 商品已成功上架");
 
-          // 清空表單
           document.getElementById("name").value = "";
           document.getElementById("price").value = "";
           document.getElementById("seller").value = "";
@@ -144,10 +180,10 @@
         });
     };
 
-    reader.readAsDataURL(photoInput.files[0]);
+    reader.readAsDataURL(file);
   }
 
-  /* 即時同步商品列表 */
+  /* ===== 即時同步顯示商品 ===== */
   db.collection("items")
     .orderBy("createdAt", "desc")
     .onSnapshot(snapshot => {
