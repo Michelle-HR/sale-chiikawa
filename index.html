@@ -125,17 +125,33 @@ nav button.active {
 <div id="pageAdd" class="page">
   <div class="form-box">
     <h3>上架商品</h3>
+
     <input id="name" placeholder="商品名稱">
     <input id="price" type="number" placeholder="價格">
+
+    <!-- 物品狀態 -->
+    <select id="status">
+      <option value="">請選擇物品狀態</option>
+      <option>全新未拆吊牌</option>
+      <option>拆包裝有吊牌</option>
+      <option>無包裝無吊牌</option>
+      <option>有髒污、毀損</option>
+      <option>景品</option>
+      <option>其他</option>
+    </select>
+
     <input id="seller" placeholder="賣家">
-    <input id="contact" placeholder="聯繫方式">
-    <input id="photo" type="file" accept="image/*">
-    <small>圖片需小於 700KB</small>
+    <input id="contact" placeholder="聯繫方式（ct、公司電話、公司信箱等其他方式）">
+
+    <input id="photo" type="file" accept="image/*" multiple>
+    <small>最多 3 張，每張需小於 700KB</small>
+
     <select id="place">
       <option>國壽仁愛大樓</option>
       <option>國壽信義安和大樓</option>
       <option>國壽內湖大樓</option>
     </select>
+
     <button onclick="addItem()">上架</button>
   </div>
 </div>
@@ -199,11 +215,12 @@ function renderPage(page) {
   pageItems.forEach(i => {
     items.innerHTML += `
       <div class="card">
-        <img src="${i.img}" onclick="openImg('${i.img}')">
+        <img src="${i.img[0]}" onclick="openImg('${i.img[0]}')">
         <b>${i.name}</b><br>
-        $${i.price}<br>
-        ${i.seller}<br>
-        ${i.place}<br>
+        價格：$${i.price}<br>
+        狀態：${i.status}<br>
+        賣家：${i.seller}<br>
+        地點：${i.place}<br>
         ${i.ownerId===myOwnerId ? `<button onclick="removeItem('${i.id}')">下架</button>` : ""}
       </div>`;
   });
@@ -230,29 +247,61 @@ function removeItem(id) {
   if(confirm("確定下架？")) db.collection("items").doc(id).delete();
 }
 
-/* ===== 上架 ===== */
+/* ===== 上架（最多 3 張） ===== */
 function addItem() {
-  const file = photo.files[0];
-  if (!file || file.size > 700*1024) {
-    alert("圖片過大");
+  const files = Array.from(photo.files);
+
+  if (!name.value || !price.value || !status.value ||
+      !seller.value || !contact.value || files.length === 0) {
+    alert("請填寫所有欄位");
     return;
   }
-  const r = new FileReader();
-  r.onload = () => {
-    db.collection("items").add({
-      name:name.value,
-      price:Number(price.value),
-      seller:seller.value,
-      contact:contact.value,
-      place:place.value,
-      img:r.result,
-      ownerId:myOwnerId,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    alert("上架成功");
-    switchPage("list");
-  };
-  r.readAsDataURL(file);
+
+  if (files.length > 3) {
+    alert("最多只能上傳 3 張圖片");
+    return;
+  }
+
+  for (const f of files) {
+    if (f.size > 700*1024) {
+      alert("每張圖片需小於 700KB");
+      return;
+    }
+  }
+
+  const images = [];
+  let loaded = 0;
+
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = () => {
+      images.push(r.result);
+      loaded++;
+      if (loaded === files.length) {
+        const total = images.reduce((s,b)=>s+Math.ceil(b.length*0.75),0);
+        if (total > 1024*1024) {
+          alert("圖片總容量過大");
+          return;
+        }
+
+        db.collection("items").add({
+          name:name.value,
+          price:Number(price.value),
+          status:status.value,
+          seller:seller.value,
+          contact:contact.value,
+          place:place.value,
+          img:images,
+          ownerId:myOwnerId,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(()=>{
+          alert("上架成功");
+          switchPage("list");
+        });
+      }
+    };
+    r.readAsDataURL(f);
+  });
 }
 </script>
 
