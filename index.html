@@ -77,7 +77,7 @@ nav button.active {
 
 /* ===== 上架表單 ===== */
 .form-box {
-  max-width: 400px;
+  max-width: 420px;
   background: #fff;
   padding: 20px;
   border-radius: 6px;
@@ -127,21 +127,17 @@ nav button.active {
     <h3>上架商品</h3>
 
     <input id="name" placeholder="商品名稱">
-    <input id="price" type="number" placeholder="價格">
+    <input id="price" type="number" min="1" placeholder="價格">
 
-    <!-- 物品狀態 -->
     <select id="status">
       <option value="">請選擇物品狀態</option>
       <option>全新未拆吊牌</option>
       <option>拆包裝有吊牌</option>
-      <option>無包裝無吊牌</option>
-      <option>有髒污、毀損</option>
       <option>景品</option>
-      <option>其他</option>
     </select>
 
     <input id="seller" placeholder="賣家">
-    <input id="contact" placeholder="聯繫方式（ct、公司電話、公司信箱等其他方式）">
+    <input id="contact" placeholder="聯繫方式">
 
     <input id="photo" type="file" accept="image/*" multiple>
     <small>最多 3 張，每張需小於 700KB</small>
@@ -150,6 +146,9 @@ nav button.active {
       <option>國壽仁愛大樓</option>
       <option>國壽信義安和大樓</option>
       <option>國壽內湖大樓</option>
+      <option>銀行松仁大樓</option>
+      <option>證券敦南大樓</option>
+      <option>另外約地點</option>
     </select>
 
     <button onclick="addItem()">上架</button>
@@ -196,7 +195,6 @@ function switchPage(p) {
 /* ===== 商品顯示 + 分頁 ===== */
 const ITEMS_PER_PAGE = 20;
 let allItems = [];
-let currentPage = 1;
 
 db.collection("items").orderBy("createdAt","desc")
 .onSnapshot(snap => {
@@ -206,9 +204,7 @@ db.collection("items").orderBy("createdAt","desc")
 });
 
 function renderPage(page) {
-  currentPage = page;
   items.innerHTML = "";
-
   const start = (page-1)*ITEMS_PER_PAGE;
   const pageItems = allItems.slice(start, start+ITEMS_PER_PAGE);
 
@@ -247,12 +243,18 @@ function removeItem(id) {
   if(confirm("確定下架？")) db.collection("items").doc(id).delete();
 }
 
-/* ===== 上架（最多 3 張） ===== */
+/* ===== 上架（已修正驗證） ===== */
 function addItem() {
   const files = Array.from(photo.files);
 
-  if (!name.value || !price.value || !status.value ||
-      !seller.value || !contact.value || files.length === 0) {
+  if (
+    name.value.trim() === "" ||
+    price.value === "" ||
+    status.value === "" ||
+    seller.value.trim() === "" ||
+    contact.value.trim() === "" ||
+    files.length === 0
+  ) {
     alert("請填寫所有欄位");
     return;
   }
@@ -285,11 +287,11 @@ function addItem() {
         }
 
         db.collection("items").add({
-          name:name.value,
+          name:name.value.trim(),
           price:Number(price.value),
           status:status.value,
-          seller:seller.value,
-          contact:contact.value,
+          seller:seller.value.trim(),
+          contact:contact.value.trim(),
           place:place.value,
           img:images,
           ownerId:myOwnerId,
