@@ -105,14 +105,18 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
-/* 管理員（方案一） */
-const ADMIN_ID="ADMIN_001";
-let myOwnerId=localStorage.getItem("ownerId");
-if(!myOwnerId){
-  myOwnerId=ADMIN_ID;
-  localStorage.setItem("ownerId",myOwnerId);
+/* ===== 管理員設定（修正版）===== */
+const ADMIN_ID = "ADMIN_001";
+
+let myOwnerId = localStorage.getItem("ownerId");
+
+// 沒有 ownerId → 一般使用者（隨機）
+if (!myOwnerId) {
+  myOwnerId = "user_" + Math.random().toString(36).slice(2);
+  localStorage.setItem("ownerId", myOwnerId);
 }
-const isAdmin=(myOwnerId===ADMIN_ID);
+
+const isAdmin = (myOwnerId === ADMIN_ID);
 
 /* 分頁 */
 const ITEMS_PER_PAGE=20;
