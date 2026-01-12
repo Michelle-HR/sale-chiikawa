@@ -4,119 +4,26 @@
 <meta charset="UTF-8">
 <title>二手交易平台</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-}
-
-/* ===== Menu ===== */
-nav {
-  background: #2c7be5;
-  padding: 10px 20px;
-  display: flex;
-  gap: 20px;
-}
-nav button {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
-}
-nav button.active {
-  font-weight: bold;
-  text-decoration: underline;
-}
-
-/* ===== Layout ===== */
-.page {
-  display: none;
-  padding: 20px;
-}
-.page.active {
-  display: block;
-}
-
-/* ===== 搜尋區 ===== */
-.filter-bar {
-  background: #fff;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.filter-bar input,
-.filter-bar select {
-  padding: 6px;
-}
-
-/* ===== 商品 Grid ===== */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.card {
-  background: #fff;
-  padding: 10px;
-  border-radius: 6px;
-}
-
-.card img {
-  width: 100%;
-  height: 200px;
-  object-fit: contain;
-  background: #eee;
-  cursor: pointer;
-}
-
-.card p {
-  margin: 4px 0;
-}
-
-/* ===== Pagination ===== */
-.pagination {
-  text-align: center;
-  margin-top: 20px;
-}
-
-/* ===== 上架表單 ===== */
-.form-box {
-  max-width: 420px;
-  background: #fff;
-  padding: 20px;
-  border-radius: 6px;
-}
-.form-box input,
-.form-box select,
-.form-box button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 8px;
-}
-
-/* ===== Lightbox ===== */
-#lightbox {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
-  justify-content: center;
-  align-items: center;
-}
-#lightbox img {
-  max-width: 90%;
-  max-height: 90%;
-}
+body{margin:0;font-family:Arial;background:#f5f5f5}
+nav{background:#2c7be5;padding:10px 20px;display:flex;gap:20px}
+nav button{background:none;border:none;color:#fff;font-size:16px;cursor:pointer}
+nav button.active{font-weight:bold;text-decoration:underline}
+.page{display:none;padding:20px}
+.page.active{display:block}
+.filter-bar{background:#fff;padding:10px;border-radius:6px;margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:#fff;padding:10px;border-radius:6px}
+.card img{width:100%;height:200px;object-fit:contain;background:#eee;cursor:pointer}
+.card p{margin:4px 0}
+.pagination{text-align:center;margin-top:20px}
+.form-box{max-width:420px;background:#fff;padding:20px;border-radius:6px}
+.form-box input,.form-box select,.form-box button{width:100%;margin-top:10px;padding:8px}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);justify-content:center;align-items:center}
+#lightbox img{max-width:90%;max-height:90%}
 </style>
 </head>
 
@@ -127,10 +34,7 @@ nav button.active {
   <button id="tabAdd" onclick="switchPage('add')">上架商品</button>
 </nav>
 
-<!-- ===== 商品列表 ===== -->
 <div id="pageList" class="page active">
-
-  <!-- 搜尋 / 篩選 -->
   <div class="filter-bar">
     <input id="searchName" placeholder="搜尋商品名稱">
     <input id="searchSeller" placeholder="搜尋賣家">
@@ -145,19 +49,15 @@ nav button.active {
     </select>
     <button onclick="applyFilter()">搜尋</button>
   </div>
-
   <div class="grid" id="items"></div>
   <div class="pagination" id="pagination"></div>
 </div>
 
-<!-- ===== 上架頁 ===== -->
 <div id="pageAdd" class="page">
   <div class="form-box">
     <h3>上架商品</h3>
-
     <input id="name" placeholder="商品名稱">
     <input id="price" type="number" min="1" placeholder="價格">
-
     <select id="status">
       <option value="">請選擇物品狀態</option>
       <option>全新未拆吊牌</option>
@@ -167,13 +67,9 @@ nav button.active {
       <option>有污損、髒污</option>
       <option>其他狀態（私訊了解）</option>
     </select>
-
     <input id="seller" placeholder="賣家">
-    <input id="contact" placeholder="聯繫方式（CT、公司電話、信箱等其他管道）">
-
+    <input id="contact" placeholder="聯繫方式">
     <input id="photo" type="file" accept="image/*" multiple>
-    <small>最多 3 張，每張 ≤ 700KB</small>
-
     <select id="place">
       <option>國壽仁愛大樓</option>
       <option>國壽信義安和大樓</option>
@@ -182,7 +78,6 @@ nav button.active {
       <option>證券敦南大樓</option>
       <option>另約地點</option>
     </select>
-
     <button onclick="addItem()">上架</button>
   </div>
 </div>
@@ -193,137 +88,100 @@ nav button.active {
 
 <script>
 firebase.initializeApp({
-  apiKey: "AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
-  authDomain: "sale-chiikawa.firebaseapp.com",
-  projectId: "sale-chiikawa"
+  apiKey:"AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
+  authDomain:"sale-chiikawa.firebaseapp.com",
+  projectId:"sale-chiikawa"
 });
-const db = firebase.firestore();
+const db=firebase.firestore();
 
-/* ownerId */
-let myOwnerId = localStorage.getItem("ownerId");
-if (!myOwnerId) {
-  myOwnerId = "owner_" + Math.random().toString(36).slice(2);
-  localStorage.setItem("ownerId", myOwnerId);
-}
+let myOwnerId=localStorage.getItem("ownerId")||("owner_"+Math.random().toString(36).slice(2));
+localStorage.setItem("ownerId",myOwnerId);
 
-const ITEMS_PER_PAGE = 20;
-let allItems = [];
-let filteredItems = [];
+const ITEMS_PER_PAGE=20;
+let allItems=[],filteredItems=[];
 
-db.collection("items").orderBy("createdAt","desc")
-.onSnapshot(snap => {
-  allItems = [];
-  snap.forEach(d => allItems.push({ id:d.id, ...d.data() }));
+db.collection("items").orderBy("createdAt","desc").onSnapshot(s=>{
+  allItems=[];
+  s.forEach(d=>allItems.push({id:d.id,...d.data()}));
   applyFilter();
 });
 
-function applyFilter() {
-  const nameKey = searchName.value.toLowerCase();
-  const sellerKey = searchSeller.value.toLowerCase();
-  const statusKey = filterStatus.value;
-
-  filteredItems = allItems.filter(i =>
-    i.name.toLowerCase().includes(nameKey) &&
-    i.seller.toLowerCase().includes(sellerKey) &&
-    (statusKey === "" || i.status === statusKey)
+function applyFilter(){
+  const n=document.getElementById("searchName").value.toLowerCase();
+  const s=document.getElementById("searchSeller").value.toLowerCase();
+  const st=document.getElementById("filterStatus").value;
+  filteredItems=allItems.filter(i=>
+    i.name.toLowerCase().includes(n)&&
+    i.seller.toLowerCase().includes(s)&&
+    (st===""||i.status===st)
   );
-
   renderPage(1);
 }
 
-function renderPage(page) {
-  items.innerHTML = "";
-  const start = (page-1)*ITEMS_PER_PAGE;
-  const pageItems = filteredItems.slice(start, start+ITEMS_PER_PAGE);
-
-  pageItems.forEach(i => {
-    items.innerHTML += `
-      <div class="card">
-        <img src="${i.img[0]}" onclick="openImg('${i.img[0]}')">
-        <p><b>商品名稱：</b>${i.name}</p>
-        <p><b>價格：</b>$${i.price}</p>
-        <p><b>物品狀態：</b>${i.status}</p>
-        <p><b>賣家：</b>${i.seller}</p>
-        <p><b>聯繫方式：</b>${i.contact}</p>
-        <p><b>交易地點：</b>${i.place}</p>
-        ${i.ownerId===myOwnerId ? `<button onclick="removeItem('${i.id}')">下架</button>` : ""}
-      </div>
-    `;
+function renderPage(p){
+  const items=document.getElementById("items");
+  items.innerHTML="";
+  filteredItems.slice((p-1)*ITEMS_PER_PAGE,p*ITEMS_PER_PAGE)
+  .forEach(i=>{
+    items.innerHTML+=`
+    <div class="card">
+      <img src="${i.img[0]}" onclick="openImg('${i.img[0]}')">
+      <p><b>商品名稱：</b>${i.name}</p>
+      <p><b>價格：</b>$${i.price}</p>
+      <p><b>狀態：</b>${i.status}</p>
+      <p><b>賣家：</b>${i.seller}</p>
+      <p><b>聯繫方式：</b>${i.contact}</p>
+      <p><b>地點：</b>${i.place}</p>
+      <button onclick="removeItem('${i.id}')">下架</button>
+    </div>`;
   });
-
-  pagination.innerHTML = "";
-  const pages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  for (let i=1;i<=pages;i++) {
-    pagination.innerHTML += `<button onclick="renderPage(${i})">${i}</button>`;
-  }
 }
 
-function openImg(src) {
-  lightboxImg.src = src;
-  lightbox.style.display = "flex";
-}
+function addItem(){
+  const name=document.getElementById("name");
+  const price=document.getElementById("price");
+  const status=document.getElementById("status");
+  const seller=document.getElementById("seller");
+  const contact=document.getElementById("contact");
+  const place=document.getElementById("place");
+  const photo=document.getElementById("photo");
+  const files=[...photo.files];
 
-function removeItem(id) {
-  if(confirm("確定下架？")) db.collection("items").doc(id).delete();
-}
-
-function addItem() {
-  const nameInput = name;
-  const priceInput = price;
-  const statusInput = status;
-  const sellerInput = seller;
-  const contactInput = contact;
-  const placeInput = place;
-  const photoInput = photo;
-  const files = Array.from(photoInput.files);
-
-  if (
-    nameInput.value.trim()==="" ||
-    priceInput.value==="" ||
-    statusInput.value==="" ||
-    sellerInput.value.trim()==="" ||
-    contactInput.value.trim()==="" ||
-    files.length===0
-  ) {
-    alert("請填寫所有欄位");
-    return;
+  if(name.value.trim()===""||price.value===""||status.value===""||
+     seller.value.trim()===""||contact.value.trim()===""||files.length===0){
+    alert("請填寫所有欄位");return;
   }
 
-  const images=[];
-  let loaded=0;
+  const imgs=[];let loaded=0;
   files.forEach(f=>{
     const r=new FileReader();
     r.onload=()=>{
-      images.push(r.result);
-      loaded++;
+      imgs.push(r.result);loaded++;
       if(loaded===files.length){
         db.collection("items").add({
-          name:nameInput.value.trim(),
-          price:Number(priceInput.value),
-          status:statusInput.value,
-          seller:sellerInput.value.trim(),
-          contact:contactInput.value.trim(),
-          place:placeInput.value,
-          img:images,
+          name:name.value.trim(),
+          price:Number(price.value),
+          status:status.value,
+          seller:seller.value.trim(),
+          contact:contact.value.trim(),
+          place:place.value,
+          img:imgs,
           ownerId:myOwnerId,
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>{
-          alert("上架成功");
-          switchPage("list");
-        });
+        }).then(()=>{alert("上架成功");switchPage("list")});
       }
     };
     r.readAsDataURL(f);
   });
 }
 
+function openImg(s){lightboxImg.src=s;lightbox.style.display="flex"}
+function removeItem(id){if(confirm("確定下架？"))db.collection("items").doc(id).delete()}
 function switchPage(p){
-  pageList.classList.remove("active");
-  pageAdd.classList.remove("active");
-  tabList.classList.remove("active");
-  tabAdd.classList.remove("active");
-  if(p==="list"){pageList.classList.add("active");tabList.classList.add("active");}
-  else{pageAdd.classList.add("active");tabAdd.classList.add("active");}
+  pageList.classList.remove("active");pageAdd.classList.remove("active");
+  tabList.classList.remove("active");tabAdd.classList.remove("active");
+  if(p==="list"){pageList.classList.add("active");tabList.classList.add("active")}
+  else{pageAdd.classList.add("active");tabAdd.classList.add("active")}
 }
 </script>
 
