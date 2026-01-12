@@ -35,7 +35,6 @@ nav button.active{font-weight:bold;text-decoration:underline}
   <button id="tabAdd" onclick="switchPage('add')">上架商品</button>
 </nav>
 
-<!-- 商品列表 -->
 <div id="pageList" class="page active">
   <div class="filter-bar">
     <input id="searchName" placeholder="搜尋商品名稱">
@@ -55,7 +54,6 @@ nav button.active{font-weight:bold;text-decoration:underline}
   <div class="pagination" id="pagination"></div>
 </div>
 
-<!-- 上架商品 -->
 <div id="pageAdd" class="page">
   <div class="form-box">
     <h3>上架商品</h3>
@@ -75,9 +73,8 @@ nav button.active{font-weight:bold;text-decoration:underline}
     <input id="seller" placeholder="賣家">
     <input id="contact" placeholder="聯繫方式">
 
-    <!-- 單張圖片 -->
     <input id="photo" type="file" accept="image/*">
-    <small>📌 僅限上傳 1 張圖片（建議小於 700KB）</small>
+    <small>📌 僅限 1 張圖片，建議小於 700KB</small>
 
     <select id="place">
       <option>國壽仁愛大樓</option>
@@ -97,7 +94,6 @@ nav button.active{font-weight:bold;text-decoration:underline}
 </div>
 
 <script>
-/* Firebase */
 firebase.initializeApp({
   apiKey:"AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
   authDomain:"sale-chiikawa.firebaseapp.com",
@@ -149,11 +145,6 @@ function renderPage(p){
       ${i.ownerId===myOwnerId?`<button onclick="removeItem('${i.id}')">下架</button>`:""}
     </div>`;
   });
-  pagination.innerHTML="";
-  const pages=Math.ceil(filteredItems.length/ITEMS_PER_PAGE);
-  for(let i=1;i<=pages;i++){
-    pagination.innerHTML+=`<button onclick="renderPage(${i})">${i}</button>`;
-  }
 }
 
 function addItem(){
@@ -192,8 +183,16 @@ function addItem(){
       place:place.value,
       img:reader.result,
       ownerId:myOwnerId,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(()=>{alert("上架成功");switchPage("list")});
+      createdAt:Date.now()
+    })
+    .then(()=>{
+      alert("上架成功");
+      switchPage("list");
+    })
+    .catch(err=>{
+      console.error(err);
+      alert("上架失敗，請查看 Console");
+    });
   };
   reader.readAsDataURL(file);
 }
