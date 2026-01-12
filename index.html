@@ -34,6 +34,7 @@ nav button.active{font-weight:bold;text-decoration:underline}
   <button id="tabAdd" onclick="switchPage('add')">上架商品</button>
 </nav>
 
+<!-- 商品列表 -->
 <div id="pageList" class="page active">
   <div class="filter-bar">
     <input id="searchName" placeholder="搜尋商品名稱">
@@ -41,35 +42,43 @@ nav button.active{font-weight:bold;text-decoration:underline}
     <select id="filterStatus">
       <option value="">全部狀態</option>
       <option>全新未拆吊牌</option>
-      <option>無包裝有吊牌</option>
-      <option>無包裝無吊牌</option>
+      <option>拆包裝有吊牌</option>
       <option>景品</option>
       <option>有污損、髒污</option>
       <option>其他狀態（私訊了解）</option>
     </select>
     <button onclick="applyFilter()">搜尋</button>
   </div>
+
   <div class="grid" id="items"></div>
   <div class="pagination" id="pagination"></div>
 </div>
 
+<!-- 上架商品 -->
 <div id="pageAdd" class="page">
   <div class="form-box">
     <h3>上架商品</h3>
+
     <input id="name" placeholder="商品名稱">
     <input id="price" type="number" min="1" placeholder="價格">
+
+    <!-- 物品狀態 -->
     <select id="status">
       <option value="">請選擇物品狀態</option>
       <option>全新未拆吊牌</option>
-      <option>無包裝有吊牌</option>
-      <option>無包裝無吊牌</option>
+      <option>拆包裝有吊牌</option>
       <option>景品</option>
       <option>有污損、髒污</option>
       <option>其他狀態（私訊了解）</option>
     </select>
+
     <input id="seller" placeholder="賣家">
     <input id="contact" placeholder="聯繫方式">
+
     <input id="photo" type="file" accept="image/*" multiple>
+    <small>最多 3 張，每張 ≤ 700KB</small>
+
+    <!-- 交易地點 -->
     <select id="place">
       <option>國壽仁愛大樓</option>
       <option>國壽信義安和大樓</option>
@@ -78,6 +87,7 @@ nav button.active{font-weight:bold;text-decoration:underline}
       <option>證券敦南大樓</option>
       <option>另約地點</option>
     </select>
+
     <button onclick="addItem()">上架</button>
   </div>
 </div>
@@ -94,9 +104,16 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
-let myOwnerId=localStorage.getItem("ownerId")||("owner_"+Math.random().toString(36).slice(2));
-localStorage.setItem("ownerId",myOwnerId);
+/* 管理員（方案一） */
+const ADMIN_ID="ADMIN_001";
+let myOwnerId=localStorage.getItem("ownerId");
+if(!myOwnerId){
+  myOwnerId=ADMIN_ID;
+  localStorage.setItem("ownerId",myOwnerId);
+}
+const isAdmin=(myOwnerId===ADMIN_ID);
 
+/* 分頁 */
 const ITEMS_PER_PAGE=20;
 let allItems=[],filteredItems=[];
 
@@ -107,9 +124,9 @@ db.collection("items").orderBy("createdAt","desc").onSnapshot(s=>{
 });
 
 function applyFilter(){
-  const n=document.getElementById("searchName").value.toLowerCase();
-  const s=document.getElementById("searchSeller").value.toLowerCase();
-  const st=document.getElementById("filterStatus").value;
+  const n=searchName.value.toLowerCase();
+  const s=searchSeller.value.toLowerCase();
+  const st=filterStatus.value;
   filteredItems=allItems.filter(i=>
     i.name.toLowerCase().includes(n)&&
     i.seller.toLowerCase().includes(s)&&
@@ -119,39 +136,34 @@ function applyFilter(){
 }
 
 function renderPage(p){
-  const items=document.getElementById("items");
   items.innerHTML="";
-  filteredItems.slice((p-1)*ITEMS_PER_PAGE,p*ITEMS_PER_PAGE)
-  .forEach(i=>{
+  filteredItems.slice((p-1)*ITEMS_PER_PAGE,p*ITEMS_PER_PAGE).forEach(i=>{
     items.innerHTML+=`
     <div class="card">
       <img src="${i.img[0]}" onclick="openImg('${i.img[0]}')">
       <p><b>商品名稱：</b>${i.name}</p>
       <p><b>價格：</b>$${i.price}</p>
-      <p><b>狀態：</b>${i.status}</p>
+      <p><b>物品狀態：</b>${i.status}</p>
       <p><b>賣家：</b>${i.seller}</p>
       <p><b>聯繫方式：</b>${i.contact}</p>
-      <p><b>地點：</b>${i.place}</p>
-      <button onclick="removeItem('${i.id}')">下架</button>
+      <p><b>交易地點：</b>${i.place}</p>
+      ${(isAdmin||i.ownerId===myOwnerId)?`<button onclick="removeItem('${i.id}')">下架</button>`:""}
     </div>`;
   });
+  pagination.innerHTML="";
+  const pages=Math.ceil(filteredItems.length/ITEMS_PER_PAGE);
+  for(let i=1;i<=pages;i++){
+    pagination.innerHTML+=`<button onclick="renderPage(${i})">${i}</button>`;
+  }
 }
 
 function addItem(){
-  const name=document.getElementById("name");
-  const price=document.getElementById("price");
-  const status=document.getElementById("status");
-  const seller=document.getElementById("seller");
-  const contact=document.getElementById("contact");
-  const place=document.getElementById("place");
-  const photo=document.getElementById("photo");
   const files=[...photo.files];
-
   if(name.value.trim()===""||price.value===""||status.value===""||
      seller.value.trim()===""||contact.value.trim()===""||files.length===0){
     alert("請填寫所有欄位");return;
   }
-
+  if(files.length>3){alert("最多只能上傳 3 張圖片");return;}
   const imgs=[];let loaded=0;
   files.forEach(f=>{
     const r=new FileReader();
@@ -175,8 +187,8 @@ function addItem(){
   });
 }
 
-function openImg(s){lightboxImg.src=s;lightbox.style.display="flex"}
-function removeItem(id){if(confirm("確定下架？"))db.collection("items").doc(id).delete()}
+function removeItem(id){if(confirm("確定下架？"))db.collection("items").doc(id).delete();}
+function openImg(s){lightboxImg.src=s;lightbox.style.display="flex";}
 function switchPage(p){
   pageList.classList.remove("active");pageAdd.classList.remove("active");
   tabList.classList.remove("active");tabAdd.classList.remove("active");
