@@ -22,6 +22,7 @@ nav button.active{font-weight:bold;text-decoration:underline}
 .pagination{text-align:center;margin-top:20px}
 .form-box{max-width:420px;background:#fff;padding:20px;border-radius:6px}
 .form-box input,.form-box select,.form-box button{width:100%;margin-top:10px;padding:8px}
+.form-box small{display:block;color:#666;font-size:12px}
 #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);justify-content:center;align-items:center}
 #lightbox img{max-width:90%;max-height:90%}
 </style>
@@ -34,6 +35,7 @@ nav button.active{font-weight:bold;text-decoration:underline}
   <button id="tabAdd" onclick="switchPage('add')">上架商品</button>
 </nav>
 
+<!-- 商品列表 -->
 <div id="pageList" class="page active">
   <div class="filter-bar">
     <input id="searchName" placeholder="搜尋商品名稱">
@@ -48,10 +50,12 @@ nav button.active{font-weight:bold;text-decoration:underline}
     </select>
     <button onclick="applyFilter()">搜尋</button>
   </div>
+
   <div class="grid" id="items"></div>
   <div class="pagination" id="pagination"></div>
 </div>
 
+<!-- 上架商品 -->
 <div id="pageAdd" class="page">
   <div class="form-box">
     <h3>上架商品</h3>
@@ -71,15 +75,10 @@ nav button.active{font-weight:bold;text-decoration:underline}
     <input id="seller" placeholder="賣家">
     <input id="contact" placeholder="聯繫方式">
 
-    <input id="photo" type="file" accept="image/*" multiple>
-    <!-- 圖片上傳 -->
-    <input id="photo" type="file" accept="image/*" multiple>
-    <small>
-      📌 圖片上傳限制：<br>
-      • 每張圖片需小於 <b>700KB</b><br>
-      • 超過限制將無法上架
-    </small>
-    
+    <!-- 單張圖片 -->
+    <input id="photo" type="file" accept="image/*">
+    <small>📌 僅限上傳 1 張圖片（建議小於 700KB）</small>
+
     <select id="place">
       <option>國壽仁愛大樓</option>
       <option>國壽信義安和大樓</option>
@@ -98,6 +97,7 @@ nav button.active{font-weight:bold;text-decoration:underline}
 </div>
 
 <script>
+/* Firebase */
 firebase.initializeApp({
   apiKey:"AIzaSyC-uOHBAqCsdZkvqisND_0JgR5govDqMZY",
   authDomain:"sale-chiikawa.firebaseapp.com",
@@ -105,18 +105,12 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
-/* ===== 管理員設定（修正版）===== */
-const ADMIN_ID = "ADMIN_001";
-
-let myOwnerId = localStorage.getItem("ownerId");
-
-// 沒有 ownerId → 一般使用者（隨機）
-if (!myOwnerId) {
-  myOwnerId = "user_" + Math.random().toString(36).slice(2);
-  localStorage.setItem("ownerId", myOwnerId);
+/* 使用者識別（僅自己上下架） */
+let myOwnerId=localStorage.getItem("ownerId");
+if(!myOwnerId){
+  myOwnerId="user_"+Math.random().toString(36).slice(2);
+  localStorage.setItem("ownerId",myOwnerId);
 }
-
-const isAdmin = (myOwnerId === ADMIN_ID);
 
 /* 分頁 */
 const ITEMS_PER_PAGE=20;
@@ -129,9 +123,9 @@ db.collection("items").orderBy("createdAt","desc").onSnapshot(s=>{
 });
 
 function applyFilter(){
-  const n=document.getElementById("searchName").value.toLowerCase();
-  const s=document.getElementById("searchSeller").value.toLowerCase();
-  const st=document.getElementById("filterStatus").value;
+  const n=searchName.value.toLowerCase();
+  const s=searchSeller.value.toLowerCase();
+  const st=filterStatus.value;
   filteredItems=allItems.filter(i=>
     i.name.toLowerCase().includes(n)&&
     i.seller.toLowerCase().includes(s)&&
@@ -141,26 +135,24 @@ function applyFilter(){
 }
 
 function renderPage(p){
-  const box=document.getElementById("items");
-  const pag=document.getElementById("pagination");
-  box.innerHTML="";
+  items.innerHTML="";
   filteredItems.slice((p-1)*ITEMS_PER_PAGE,p*ITEMS_PER_PAGE).forEach(i=>{
-    box.innerHTML+=`
+    items.innerHTML+=`
     <div class="card">
-      <img src="${i.img[0]}" onclick="openImg('${i.img[0]}')">
+      <img src="${i.img}" onclick="openImg('${i.img}')">
       <p><b>商品名稱：</b>${i.name}</p>
       <p><b>價格：</b>$${i.price}</p>
       <p><b>狀態：</b>${i.status}</p>
       <p><b>賣家：</b>${i.seller}</p>
       <p><b>聯繫方式：</b>${i.contact}</p>
       <p><b>地點：</b>${i.place}</p>
-      ${(isAdmin||i.ownerId===myOwnerId)?`<button onclick="removeItem('${i.id}')">下架</button>`:""}
+      ${i.ownerId===myOwnerId?`<button onclick="removeItem('${i.id}')">下架</button>`:""}
     </div>`;
   });
-  pag.innerHTML="";
+  pagination.innerHTML="";
   const pages=Math.ceil(filteredItems.length/ITEMS_PER_PAGE);
   for(let i=1;i<=pages;i++){
-    pag.innerHTML+=`<button onclick="renderPage(${i})">${i}</button>`;
+    pagination.innerHTML+=`<button onclick="renderPage(${i})">${i}</button>`;
   }
 }
 
@@ -172,43 +164,56 @@ function addItem(){
   const contact=document.getElementById("contact");
   const place=document.getElementById("place");
   const photo=document.getElementById("photo");
-  const files=[...photo.files];
 
-  if(name.value.trim()===""||price.value===""||status.value===""||
-     seller.value.trim()===""||contact.value.trim()===""||files.length===0){
+  if(
+    name.value.trim()===""||
+    price.value===""||
+    status.value===""||
+    seller.value.trim()===""||
+    contact.value.trim()===""||
+    !photo.files[0]
+  ){
     alert("請填寫所有欄位");return;
   }
 
-  if(files.length>3){alert("最多只能上傳 3 張圖片");return;}
+  const file=photo.files[0];
+  if(file.size>700*1024){
+    alert("圖片需小於 700KB");return;
+  }
 
-  const imgs=[];let loaded=0;
-  files.forEach(f=>{
-    const r=new FileReader();
-    r.onload=()=>{
-      imgs.push(r.result);loaded++;
-      if(loaded===files.length){
-        db.collection("items").add({
-          name:name.value.trim(),
-          price:Number(price.value),
-          status:status.value,
-          seller:seller.value.trim(),
-          contact:contact.value.trim(),
-          place:place.value,
-          img:imgs,
-          ownerId:myOwnerId,
-          createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>{alert("上架成功");switchPage("list")});
-      }
-    };
-    r.readAsDataURL(f);
-  });
+  const reader=new FileReader();
+  reader.onload=()=>{
+    db.collection("items").add({
+      name:name.value.trim(),
+      price:Number(price.value),
+      status:status.value,
+      seller:seller.value.trim(),
+      contact:contact.value.trim(),
+      place:place.value,
+      img:reader.result,
+      ownerId:myOwnerId,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(()=>{alert("上架成功");switchPage("list")});
+  };
+  reader.readAsDataURL(file);
 }
 
-function removeItem(id){if(confirm("確定下架？"))db.collection("items").doc(id).delete();}
-function openImg(s){lightboxImg.src=s;lightbox.style.display="flex";}
+function removeItem(id){
+  if(confirm("確定下架？")){
+    db.collection("items").doc(id).delete();
+  }
+}
+
+function openImg(src){
+  lightboxImg.src=src;
+  lightbox.style.display="flex";
+}
+
 function switchPage(p){
-  pageList.classList.remove("active");pageAdd.classList.remove("active");
-  tabList.classList.remove("active");tabAdd.classList.remove("active");
+  pageList.classList.remove("active");
+  pageAdd.classList.remove("active");
+  tabList.classList.remove("active");
+  tabAdd.classList.remove("active");
   if(p==="list"){pageList.classList.add("active");tabList.classList.add("active")}
   else{pageAdd.classList.add("active");tabAdd.classList.add("active")}
 }
